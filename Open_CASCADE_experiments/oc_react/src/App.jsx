@@ -1,62 +1,63 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 import "@google/model-viewer";
 import { visualizeShapes } from "./visualize.jsx";
+import { useState, useEffect } from 'react';
 import opencascade from "opencascade.js/dist/opencascade.full.js"
 import opencascadeWasm from "opencascade.js/dist/opencascade.full.wasm?url"
 
+// Initialize OpenCascade (using async/await)
 const oc = await opencascade({
-        locateFile: () => opencascadeWasm,
-      })
+  locateFile: () => opencascadeWasm,
+});
 
-function createCutShape( oc, sphereSize ) {
+// Function to create the cut shape
+function createCutShape(oc, sphereSize) {
   const box = new oc.BRepPrimAPI_MakeBox_2(1, 1, 1);
   const sphere = new oc.BRepPrimAPI_MakeSphere_5(new oc.gp_Pnt_3(0.5, 0.5, 0.5), sphereSize);
   const cut = new oc.BRepAlgoAPI_Cut_3(box.Shape(), sphere.Shape(), new oc.Message_ProgressRange_1());
   cut.Build(new oc.Message_ProgressRange_1());
   return cut.Shape();
 }
-const myShape = createCutShape(oc, 0.65);
-const modelUrl = visualizeShapes(oc, myShape);
 
 function App() {
+  // State for the sphere size, with default value 0.65
+  const [sphereSize, setSphereSize] = useState(0.65);
+
+  // State for the model URL
+  const [modelUrl, setModelUrl] = useState('');
+
+  // Recalculate the model URL whenever sphereSize changes
+  useEffect(() => {
+    const myShape = createCutShape(oc, sphereSize);
+    const newModelUrl = visualizeShapes(oc, myShape);
+    setModelUrl(newModelUrl);
+  }, [sphereSize]);
+
+  // Handle slider change
+  const handleSliderChange = (event) => {
+    setSphereSize(parseFloat(event.target.value)); // Update sphere size state
+  };
+
   return (
-    // Now we can simply use the URL with model-viewer.
-    <model-viewer src={modelUrl} camera-controls enable-pan />
+    <div style={{ textAlign: 'center' }}>
+      {/* The 3D model viewer */}
+      <model-viewer src={modelUrl} style={{ width: '80vw', height: '80vh' }} camera-controls enable-pan />
+      
+      {/* The slider to adjust the sphere size */}
+      <div style={{ marginTop: '20px' }}>
+        <input 
+          type="range" 
+          min="0.5" 
+          max="0.87" 
+          step="0.01" 
+          value={sphereSize} 
+          onChange={handleSliderChange} 
+          style={{ width: '50%' }} 
+        />
+        <p>Sphere Size: {sphereSize}</p>
+      </div>
+    </div>
   );
 }
 
-/*
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
-  */
-
-export default App
+export default App;
