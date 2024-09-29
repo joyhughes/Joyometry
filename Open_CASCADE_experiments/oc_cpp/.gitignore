@@ -1,0 +1,9 @@
+# Ignore everything in the build directory
+build/
+
+# Optional: Ignore other common OS and editor-specific files
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
