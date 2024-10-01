@@ -1,15 +1,18 @@
 
-#include <gp_Pnt.hxx>
-#include <gp_Circ.hxx>
-#include <gp_Trsf.hxx>
+/// DEMO Create a 3-D printable Celtic torc (torus-shaped object) using OpenCascade
+
 #include <gp_Ax1.hxx>
 #include <gp_Ax2.hxx>
+#include <gp_Circ.hxx>
+#include <gp_Pnt.hxx>
+#include <gp_Trsf.hxx>
 #include <Geom_BSplineCurve.hxx>
 #include <GeomAPI_PointsToBSpline.hxx>
 #include <Geom_Plane.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_TrimmedCurve.hxx>
 #include <Geom_CylindricalSurface.hxx>
+#include <BRep_Builder.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
@@ -24,11 +27,24 @@
 #include <TopoDS_Wire.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
-#include <BRepAlgoAPI_Fuse.hxx>
+#include <TopoDS_Compound.hxx>
+#include <TopExp_Explorer.hxx>
 #include <BRepTools.hxx>
 #include <StdFail_NotDone.hxx>
 #include <StlAPI_Writer.hxx>
+
 #include <iostream>
+#include <sstream>  // Include for stringstream
+
+// Function to return the greatest common factor of two integers
+int GreatestCommonFactor(int a, int b) {
+    while (b != 0) {
+        int temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
 
 void SaveAsSTL(const TopoDS_Shape& shape, const std::string& filename) {
     if (shape.IsNull()) {
@@ -131,10 +147,14 @@ TopoDS_Shape CreatePipeAroundCurve(const Handle(Geom_Curve)& curve, Standard_Rea
     }
 }
 
-Handle(Geom_BSplineCurve) CreateHelixCurve(Standard_Real circleDiameter, Standard_Real helixOffset, Standard_Integer helixRotations, Standard_Integer nPoints = 1000) {
+Handle(Geom_BSplineCurve) CreateHelixCurve(Standard_Real circleDiameter, Standard_Real helixOffset, Standard_Integer helixRotations, Standard_Integer revolutions, Standard_Integer pointsPerRevolution = 1000) {
     try {
+        // Determine how many revolutions are needed to complete a loop
+        Standard_Integer gcf = GreatestCommonFactor(revolutions, helixRotations);  // Greatest common factor of nPoints and helixRotations
+        Standard_Integer neededRevolutions = revolutions / gcf;  // Number of revolutions needed to complete the helix
         Standard_Real radius = circleDiameter / 2.0;  // Radius of the base circle
-        Standard_Real totalAngle = 2 * M_PI;  // Total angle for the full number of rotations
+        Standard_Real totalAngle = 2 * M_PI * neededRevolutions;  // Total angle for the full number of rotations
+        Standard_Integer nPoints = neededRevolutions * pointsPerRevolution;
 
         // Increase the number of points by 1 to ensure a periodic loop
         TColgp_Array1OfPnt points(1, nPoints + 1); // One extra point to close the loop
@@ -145,7 +165,7 @@ Handle(Geom_BSplineCurve) CreateHelixCurve(Standard_Real circleDiameter, Standar
             Standard_Real angleAroundCircle = t;  // Angle along the base circle
 
             // Helical rotation around the circle
-            Standard_Real localHelixAngle = t * helixRotations;
+            Standard_Real localHelixAngle = t * helixRotations / revolutions;
 
             // Base coordinates for the circle
             Standard_Real baseX = radius * cos(angleAroundCircle);
@@ -190,19 +210,24 @@ int main() {
     // Example parameters
     Standard_Real circleDiameter = 100.0;
     Standard_Real helixOffset = 10.0;
-    Standard_Integer helixRotations = 3;
-    Standard_Integer nPoints = 1000;
+    Standard_Integer helixRotations = 10;
+    Standard_Integer revolutions = 3;
+    Standard_Integer pointsPerRevolution = 1000;
     Standard_Real pipeDiameter = 5.0;  // Diameter of the pipe
 
     // Create the helix curve using the previously defined function
-    Handle(Geom_BSplineCurve) helixCurve = CreateHelixCurve(circleDiameter, helixOffset, helixRotations, nPoints);
+    Handle(Geom_BSplineCurve) helixCurve = CreateHelixCurve(circleDiameter, helixOffset, helixRotations, revolutions, pointsPerRevolution);
 
     // Create the pipe around the helix curve
     TopoDS_Shape pipeShape = CreatePipeAroundCurve(helixCurve, pipeDiameter);
 
+    // Create the filename dynamically
+    std::stringstream filename;
+    filename << "../results/torc_" << revolutions << "_" << helixRotations << "_" << circleDiameter << "_" << helixOffset << "_" << pipeDiameter << ".brep";
+
     // Output the pipe geometry to a BREP file
-    OutputShapeToBrepFile(pipeShape, "../results/pipe_helix.brep");
-    SaveAsSTL(pipeShape, "../results/pipe_helix.stl");
+    OutputShapeToBrepFile(pipeShape, filename.str().c_str());
 
     return 0;
 }
+
