@@ -8,12 +8,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find OpenCASCADE
 find_package(OpenCASCADE REQUIRED)
 
-# Add executable
-add_executable(my_occt_app main.cpp)
-add_executable(oc_test_app oc_test.cpp)
+# Add executables
+add_executable(my_occt_app minimal.cpp)
+add_executable(torc_app torc.cpp)
 
-# Link the OpenCASCADE libraries
+# Link the OpenCASCADE libraries to both executables
 target_link_libraries(my_occt_app PRIVATE ${OpenCASCADE_LIBRARIES})
+target_link_libraries(torc_app PRIVATE ${OpenCASCADE_LIBRARIES})
 
-# Include OpenCASCADE headers
+# Include OpenCASCADE headers for both executables
 target_include_directories(my_occt_app PRIVATE ${OpenCASCADE_INCLUDE_DIR})
+target_include_directories(torc_app PRIVATE ${OpenCASCADE_INCLUDE_DIR})
+
